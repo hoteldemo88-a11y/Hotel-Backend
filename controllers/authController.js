@@ -108,3 +108,44 @@ exports.getMe = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+exports.getAllUsers = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    }
+    const users = await User.findAll({
+      attributes: ['id', 'name', 'email', 'role', 'created_at']
+    });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    }
+
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await user.update({ password: hashedPassword });
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
